@@ -1575,15 +1575,6 @@ void vcAutoRenewalWatchTgtPosAndAngZ(VC_WORK* w_p, VC_CAM_MV_TYPE cam_mv_type, V
         w_p->watch_tgt_pos[1] = w_p->watch_tgt_max_y;
 }
 
-static inline void vec_add_reverse(void* x, void* y, void* out) {
-    asm("\
-        lqc2 vf4, 0(%1)\n\
-        lqc2 vf5, 0(%0)\n\
-        vadd.xyzw vf4, vf4, vf5\n\
-        sqc2 vf4, 0(%2)"
-        : "+r"(x), "+r"(y), "+r"(out));
-}
-
 #line 2487
 void vcMakeNormalWatchTgtPos(float* watch_tgt_pos, float* watch_tgt_ang_z_p, VC_WORK* w_p, VC_CAM_MV_TYPE cam_mv_type, VC_AREA_SIZE_TYPE cur_rd_area_size) {
     sceVu0FVECTOR ang;
@@ -1894,8 +1885,47 @@ void vcSetWatchTgtYParam(sceVu0FVECTOR watch_pos, VC_WORK* w_p, VC_CAM_MV_TYPE c
     }
 }
 
-// @todo: Float arg issue with `shAtan2` call, matched at https://decomp.me/scratch/ngXcY
-INCLUDE_ASM("asm/nonmatchings/view/vc_main", vcAdjustWatchYLimitHighWhenFarView);
+// @hack: adding unused static inline asm func here fixes some float arg issues inside `vcAdjustWatchYLimitHighWhenFarView`.
+// Copied from `float_min`.
+static inline float vc_min_hack(float x, float y) { asm("min.s %0, %0, %1" : "+f"(x) : "f"(y)); return x; }
+
+#line 3039
+void vcAdjustWatchYLimitHighWhenFarView(sceVu0FVECTOR watch_pos, sceVu0FVECTOR cam_pos) {
+	/* 0x15 */ float max_cam_ang_x;
+	/* 0x16 */ float cam_ang_x;
+	/* 0x1d */ float dist;
+	/* 0x1d */ float ofs_y;
+
+    max_cam_ang_x = shAtan2(6500.0f, -(-2500.0f - cam_pos[1])) - shAtan2(VbScreenInfo.scr_z, VbScreenInfo.sy / 2.0f);
+    
+    
+    
+    
+    dist = vec3_dist_xz(cam_pos, watch_pos);
+
+    ofs_y = watch_pos[1] - cam_pos[1];
+    
+    cam_ang_x = shAtan2(dist, -ofs_y);
+
+    
+    if (cam_ang_x > max_cam_ang_x) {
+        watch_pos[1] = cam_pos[1] - ((dist * shSinF(max_cam_ang_x)) / shCosF(max_cam_ang_x));
+    }
+
+    
+    switch(stage->glb_crd)
+    {
+
+        
+        case 9:
+            if (cam_ang_x > TO_RAD(-22.5f)) {
+                watch_pos[1] = cam_pos[1] - ((dist * shSinF(TO_RAD(-22.5f))) / shCosF(TO_RAD(-22.5f)));
+            }
+            break;
+    }
+
+    
+}
 
 static inline void vec_div_xyz_reverse(void* v, void* out, float s) {
     asm("lui t7, 0x3f80\n\
@@ -3432,7 +3462,7 @@ void vcAdjCamOfsAngByCharaInScreen(sceVu0FVECTOR cam_ang, sceVu0FVECTOR ofs_cam2
         adj_cam_ang_y = 0.0f;
     }
 
-    ASSERT(w_p->scr_half_ang_wy > ((3.14159265358979f/180.0f)*(5.0f))); // @todo: should be ASSERT(w_p->scr_half_ang_wy > TO_RAD(5.0f)), macro isn't being expanded?
+    ASSERT(w_p->scr_half_ang_wy > TO_RAD(5.0f));
     
     if (watch2chr_bottom_ofs_ang_x < -w_p->scr_half_ang_wy) {
         

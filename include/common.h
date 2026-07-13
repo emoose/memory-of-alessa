@@ -26,12 +26,12 @@ typedef enum bool {
 } bool;
 
 #define NULL 0
-#define PI 3.1415927f
+#define PI 3.14159265358979f
 #define TAU 6.2831855f
 #define QUARTER_TURN 1.5707964f
 #define MAX_FLOAT 3.4028235e38f
-#define RADIANS_PER_DEGREE (PI / 180.0f)
-#define TO_RAD(x) (RADIANS_PER_DEGREE * (x))
+#define RADIANS_PER_DEGREE (PI/180.0f)
+#define TO_RAD(x) (RADIANS_PER_DEGREE*(x))
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP_MAX(_val, _max) do { (_val) = (_val) > (_max) ? (_val) : (_max); } while (0);
